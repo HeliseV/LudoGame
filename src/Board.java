@@ -33,13 +33,13 @@ public class Board extends JFrame {
     private BufferedWriter bufferedWriter;
     private String username;
 
-    public static void main(String[] args) throws IOException {
-        Scanner scanner = new Scanner(System.in);
-        System.out.println("Enter your Username for the group chat: ");
-        String username = scanner.nextLine();
-        Socket socket = new Socket("localhost", 1234);
-        Board LudoGameBoard = new Board(socket, username);
-    }
+//    public static void main(String[] args) throws IOException {
+//        Scanner scanner = new Scanner(System.in);
+//        System.out.println("Enter your Username for the group chat: ");
+//        String username = scanner.nextLine();
+//        Socket socket = new Socket("localhost", 1234);
+//        Board LudoGameBoard = new Board(socket, username);
+//    }
 
     public Board(Socket socket, String username) {
 

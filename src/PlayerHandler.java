@@ -2,23 +2,23 @@ import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
 
-public class ClientHandler implements Runnable{
+public class PlayerHandler implements Runnable{
 
-    public static ArrayList<ClientHandler> clientHandlers= new ArrayList<>();
+    public static ArrayList<PlayerHandler> playerHandlers = new ArrayList<>();
     private Socket socket;
     private BufferedReader bufferedReader;
     private BufferedWriter bufferedWriter;
     private String clientUsername;
     int playerIndex;
 
-    public ClientHandler(Socket socket, int position) {
+    public PlayerHandler(Socket socket, int position) {
         try {
             this.playerIndex = position;
             this.socket = socket;
             this. bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.clientUsername = bufferedReader.readLine();
-            clientHandlers.add(this);
+            playerHandlers.add(this);
             clientMessage("I@"+ playerIndex);
             broadcastMessage(""+(playerIndex));
         } catch (IOException e) {
@@ -41,12 +41,12 @@ public class ClientHandler implements Runnable{
     }
 
     public void broadcastMessage(String messageToSend) {
-        for (ClientHandler clientHandler : clientHandlers) {
+        for (PlayerHandler playerHandler : playerHandlers) {
             try {
-                if (!clientHandler.clientUsername.equals(clientUsername)) {
-                    clientHandler.bufferedWriter.write(messageToSend);
-                    clientHandler.bufferedWriter.newLine();
-                    clientHandler.bufferedWriter.flush();
+                if (!playerHandler.clientUsername.equals(clientUsername)) {
+                    playerHandler.bufferedWriter.write(messageToSend);
+                    playerHandler.bufferedWriter.newLine();
+                    playerHandler.bufferedWriter.flush();
                 }
             } catch (IOException e) {
                 closeEverything(socket, bufferedReader, bufferedWriter);
@@ -55,12 +55,12 @@ public class ClientHandler implements Runnable{
     }
 
     public void clientMessage(String messageToSend) {
-        for (ClientHandler clientHandler : clientHandlers) {
+        for (PlayerHandler playerHandler : playerHandlers) {
             try {
-                if (clientHandler.clientUsername.equals(clientUsername)) {
-                    clientHandler.bufferedWriter.write(messageToSend);
-                    clientHandler.bufferedWriter.newLine();
-                    clientHandler.bufferedWriter.flush();
+                if (playerHandler.clientUsername.equals(clientUsername)) {
+                    playerHandler.bufferedWriter.write(messageToSend);
+                    playerHandler.bufferedWriter.newLine();
+                    playerHandler.bufferedWriter.flush();
                 }
             } catch (IOException e) {
                 closeEverything(socket, bufferedReader, bufferedWriter);
@@ -69,7 +69,7 @@ public class ClientHandler implements Runnable{
     }
 
     public void removeClientHandler() {
-        clientHandlers.remove(this);
+        playerHandlers.remove(this);
         broadcastMessage("00");
     }
 
