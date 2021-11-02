@@ -9,10 +9,14 @@ import java.net.Socket;
 import java.util.Scanner;
 
 public class Board extends JFrame {
+    private boolean gameHasStarted = false;
+    private int playersPlayingCurrentGame = 0;
+    private int totalNumberofPlayers;
     private int PlayertoPlay = 0;
     BoardPositions GPath = new BoardPositions();
     JPanel BoardPanel = new JPanel();
     JPanel Background = new JPanel();
+    JPanel diePanel = new JPanel();
     JLayeredPane gameBoardGUI = new JLayeredPane();
     JButton dieButton = new JButton("Roll Die");
     Player[] players = new Player[4];
@@ -153,9 +157,20 @@ public class Board extends JFrame {
         @Override
         public void actionPerformed(ActionEvent e) {
             if (PlayertoPlay == myPlayerIndex) {
-                if (PlayertoPlay < 3) {PlayertoPlay++;}
-                else {PlayertoPlay = 0;}
+                if (myPlayerIndex ==0 && !gameHasStarted) {
+                gameHasStarted = true;
+                if (totalNumberofPlayers < 4) {
+                    playersPlayingCurrentGame = totalNumberofPlayers;
+                } else {playersPlayingCurrentGame = 3;}
+            }
+
                 currentRollValue = rollDie();
+                if (currentRollValue !=6) {
+                    if (PlayertoPlay < playersPlayingCurrentGame) {PlayertoPlay++;}
+                    else {PlayertoPlay = 0;}
+                    diePanel.setVisible(false);
+                }
+
                 players[myPlayerIndex].movePiece(currentRollValue);
                 showImage(currentRollValue);
                 try {
@@ -239,8 +254,30 @@ public class Board extends JFrame {
                         if (messageFromGroupChat.length() == 3) {
                             String[] message = messageFromGroupChat.split("@", 2);
                             myPlayerIndex = Integer.parseInt(message[1]);
-                            createBackground(players[Integer.parseInt(message[1])].colour + "bg.png");
-                        } else {
+                            if (myPlayerIndex <4) {
+                                createBackground(players[Integer.parseInt(message[1])].colour + "bg.png");
+                            } else {
+//                                Background
+                                diePanel.removeAll();
+                            }
+                        }else if (messageFromGroupChat.length()==1)
+                        {totalNumberofPlayers = Integer.parseInt(messageFromGroupChat);}
+                        else if (messageFromGroupChat.length()==2) {
+                            diePanel.setVisible(false);
+                            JLabel rollInfoLabel3 = new JLabel(" Game Terminated.");
+                            RollInfo.removeAll();
+                            eRollInfo.removeAll();
+                            RollInfo.add(rollInfoLabel3);
+                            eRollInfo.add(rollInfoLabel3);
+                            repaint();
+                            revalidate();
+                        }else {
+                            if (!gameHasStarted) {
+                                gameHasStarted = true;
+                                if (totalNumberofPlayers < 4) {
+                                    playersPlayingCurrentGame = totalNumberofPlayers;
+                                } else {playersPlayingCurrentGame = 3;}
+                            }
                             String[] message = messageFromGroupChat.split("@", 4);
                             players[Integer.parseInt(message[0])].movePiece(Integer.parseInt(message[1]));
                             eRollInfo.removeAll();
@@ -264,6 +301,7 @@ public class Board extends JFrame {
                                 JLabel rollInfoLabel = new JLabel("YOUR TURN");
                                 rollInfoLabel.setFont(new Font("Verdana", Font.BOLD, 25));
                                 Color color2;
+                                diePanel.setVisible(true);
                                 try {
                                     Field field = Class.forName("java.awt.Color").
                                             getField(players[myPlayerIndex].colour.toLowerCase());
@@ -272,6 +310,7 @@ public class Board extends JFrame {
                                     color2 = null; // Not defined
                                 }
                                 rollInfoLabel.setForeground(color2);
+                                RollInfo.removeAll();
                                 RollInfo.add(rollInfoLabel);
                                 repaint();
                                 revalidate();
@@ -304,20 +343,18 @@ public class Board extends JFrame {
     }
 
     private void guiSetup() {
-
         Background.setBounds(0, 0, 1000, 700);
         Background.setBackground(new Color(1.0f, 1.0f, 1.0f, 0.0f));
-        createBackground("Redbg.png");
+        createBackground("Defaultbg.png");
         //JLayeredPane to allow for other objects to overlay board
         gameBoardGUI.setBounds(0, 0, 1000, 700);
         gameBoardGUI.setBackground(new Color(255, 255, 255));
         add(gameBoardGUI);
 
         //Board
-        JPanel diePanel = new JPanel();
         diePanel.setBounds(600, 550, 100, 50);
-        diePanel.setBackground(new Color(1.0f, 1.0f, 1.0f, 0.0f));
         diePanel.add(this.dieButton);
+        diePanel.setBackground(new Color(1.0f, 1.0f, 1.0f, 0.0f));
         dieButton.addActionListener(new theGambler());
 
         //adding piece Image to GUI
