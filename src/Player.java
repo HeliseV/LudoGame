@@ -3,6 +3,7 @@ public class Player {
     public String colour;//optional string for colour name with appropriate getter
     public Piece[] pieces = new Piece[4];//array of player pieces
     private int activePawn = 0; //which of the players piece is moving
+    private boolean HasWon = false;
 
 
     Player(char ID) //create a player
@@ -27,8 +28,7 @@ public class Player {
 
     //movement for active pawn
     public void movePiece(int moveNumber) {
-        if (!pieces[activePawn].PieceIsAtBase())
-        {
+        if (!pieces[activePawn].PieceIsAtBase()) {
             if (moveNumber + pieces[activePawn].getPiecePosition() < 57) {
                 for (int x = 0; x < moveNumber; x++) {
                     pieces[activePawn].move();
@@ -42,6 +42,7 @@ public class Player {
                 if (activePawn < 3) {
                     activePawn++;
                 } else {
+                    HasWon = true;
                     System.out.println("winner");
                 }
             }
@@ -51,5 +52,8 @@ public class Player {
             System.out.println(moveNumber);
         }
     }
-//    public abstract void hasWon();
+
+    public boolean hasWon() {
+        return HasWon;
+    }
 }

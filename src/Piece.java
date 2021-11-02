@@ -63,7 +63,7 @@ public class Piece extends JPanel {
             positionX = BoardPositions.moveToFinalX(colourID, pieceIndex);
             positionY = BoardPositions.moveToFinalY(colourID, pieceIndex);
             isHome = true;
-        } else{
+        } else {
             positionX = BoardPositions.moveToPositionX(colourID, piecePosition);
             positionY = BoardPositions.moveToPositionY(colourID, piecePosition);
         }
@@ -71,6 +71,7 @@ public class Piece extends JPanel {
         setBounds(positionX + 5, positionY + 5, 30, 30);
         piecePosition++;
     }
+
     public boolean PieceIsAtBase() {
         return isAtBase;
     }

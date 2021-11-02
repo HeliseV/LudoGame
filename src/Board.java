@@ -6,12 +6,13 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.lang.reflect.Field;
 import java.net.Socket;
+import java.util.Objects;
 import java.util.Scanner;
 
 public class Board extends JFrame {
     private boolean gameHasStarted = false;
     private int playersPlayingCurrentGame = 0;
-    private int totalNumberofPlayers;
+    private int totalNumberPlayers;
     private int PlayertoPlay = 0;
     BoardPositions GPath = new BoardPositions();
     JPanel BoardPanel = new JPanel();
@@ -23,8 +24,7 @@ public class Board extends JFrame {
     int myPlayerIndex;
 
 
-    private int currentRollValue = 0;   //Die current roll value set by roll die method, add getter??
-    private char playerToRoll = 0;
+    private int currentRollValue = 0;
     JPanel RollInfo = new JPanel(new GridBagLayout());
     JPanel eRollInfo = new JPanel(new GridBagLayout());
 
@@ -157,28 +157,44 @@ public class Board extends JFrame {
         @Override
         public void actionPerformed(ActionEvent e) {
             if (PlayertoPlay == myPlayerIndex) {
-                if (myPlayerIndex ==0 && !gameHasStarted) {
-                gameHasStarted = true;
-                if (totalNumberofPlayers < 4) {
-                    playersPlayingCurrentGame = totalNumberofPlayers;
-                } else {playersPlayingCurrentGame = 3;}
-            }
+                if (myPlayerIndex == 0 && !gameHasStarted) {
+                    gameHasStarted = true;
+                    if (totalNumberPlayers < 4) {
+                        playersPlayingCurrentGame = totalNumberPlayers;
+                    } else {
+                        playersPlayingCurrentGame = 3;
+                    }
+                }
 
                 currentRollValue = rollDie();
-                if (currentRollValue !=6) {
-                    if (PlayertoPlay < playersPlayingCurrentGame) {PlayertoPlay++;}
-                    else {PlayertoPlay = 0;}
+                if (currentRollValue != 6) {
+                    if (PlayertoPlay < playersPlayingCurrentGame) {
+                        PlayertoPlay++;
+                    } else {
+                        PlayertoPlay = 0;
+                    }
                     diePanel.setVisible(false);
                 }
 
                 players[myPlayerIndex].movePiece(currentRollValue);
                 showImage(currentRollValue);
-                try {
-                    bufferedWriter.write(myPlayerIndex + "@" + currentRollValue + "@" + username + "@" + PlayertoPlay);
-                    bufferedWriter.newLine();
-                    bufferedWriter.flush();
-                } catch (IOException ex) {
-                    System.out.println("Error");
+                if (players[myPlayerIndex].hasWon()) {
+                    determineWinner(true);
+                    try {
+                        bufferedWriter.write("YL");
+                        bufferedWriter.newLine();
+                        bufferedWriter.flush();
+                    } catch (IOException ex) {
+                        System.out.println("Error Action Event");
+                    }
+                } else {
+                    try {
+                        bufferedWriter.write(myPlayerIndex + "@" + currentRollValue + "@" + username + "@" + PlayertoPlay);
+                        bufferedWriter.newLine();
+                        bufferedWriter.flush();
+                    } catch (IOException ex) {
+                        System.out.println("Error Action Event");
+                    }
                 }
             }
         }
@@ -195,7 +211,7 @@ public class Board extends JFrame {
 
         BoardPanel.removeAll();
         JLabel DieImageLabel = new JLabel();
-        ImageIcon DieImageIcon = new ImageIcon(getClass().getResource("dice_" + num + "w.png"));
+        ImageIcon DieImageIcon = new ImageIcon(Objects.requireNonNull(getClass().getResource("dice_" + num + "w.png")));
         Image DieImage = DieImageIcon.getImage();
         Image resizedDieImage = DieImage.getScaledInstance(95, 95, Image.SCALE_SMOOTH);
         DieImageLabel.setIcon(new ImageIcon(resizedDieImage));
@@ -207,7 +223,7 @@ public class Board extends JFrame {
     private void createBackground(String relativePath) {
         Background.removeAll();
         JLabel bg = new JLabel();
-        ImageIcon backgroundIcon = new ImageIcon(getClass().getResource(relativePath));
+        ImageIcon backgroundIcon = new ImageIcon(Objects.requireNonNull(getClass().getResource(relativePath)));
         Image backgroundImage = backgroundIcon.getImage();
         Image backgroundImageScaled = backgroundImage.getScaledInstance(1000, 700, Image.SCALE_SMOOTH);
         bg.setIcon(new ImageIcon(backgroundImageScaled));
@@ -217,113 +233,131 @@ public class Board extends JFrame {
     }
 
     public void sendMessage() {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    bufferedWriter.write(username);
+        new Thread(() -> {
+            try {
+                bufferedWriter.write(username);
+                bufferedWriter.newLine();
+                bufferedWriter.flush();
+
+                Scanner scanner = new Scanner(System.in);
+                while (socket.isConnected()) {
+                    String messageToSend = scanner.nextLine();
+                    bufferedWriter.write(username + ": " + messageToSend);
+                    System.out.println(messageToSend);
                     bufferedWriter.newLine();
                     bufferedWriter.flush();
-
-                    Scanner scanner = new Scanner(System.in);
-                    while (socket.isConnected()) {
-                        String messageToSend = scanner.nextLine();
-                        bufferedWriter.write(username + ": " + messageToSend);
-                        System.out.println(messageToSend);
-                        bufferedWriter.newLine();
-                        bufferedWriter.flush();
-                    }
-                } catch (IOException e) {
-                    closeEverything(socket, bufferedReader, bufferedWriter);
                 }
+            } catch (IOException e) {
+                closeEverything(socket, bufferedReader, bufferedWriter);
             }
         }).start();
 
     }
 
     public void listenForMessage() {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                String messageFromGroupChat;
+        new Thread(() -> {
+            String messageFromGroupChat;
 
-                while (socket.isConnected()) {
-                    try {
-                        messageFromGroupChat = bufferedReader.readLine();
-                        System.out.println(messageFromGroupChat);
-                        if (messageFromGroupChat.length() == 3) {
-                            String[] message = messageFromGroupChat.split("@", 2);
-                            myPlayerIndex = Integer.parseInt(message[1]);
-                            if (myPlayerIndex <4) {
-                                createBackground(players[Integer.parseInt(message[1])].colour + "bg.png");
-                            } else {
+            while (socket.isConnected()) {
+                try {
+                    messageFromGroupChat = bufferedReader.readLine();
+                    System.out.println(messageFromGroupChat);
+                    if (messageFromGroupChat.length() == 3) {
+                        String[] message = messageFromGroupChat.split("@", 2);
+                        myPlayerIndex = Integer.parseInt(message[1]);
+                        if (myPlayerIndex < 4) {
+                            createBackground(players[Integer.parseInt(message[1])].colour + "bg.png");
+                        } else {
 //                                Background
-                                diePanel.removeAll();
-                            }
-                        }else if (messageFromGroupChat.length()==1)
-                        {totalNumberofPlayers = Integer.parseInt(messageFromGroupChat);}
-                        else if (messageFromGroupChat.length()==2) {
-                            diePanel.setVisible(false);
+                            diePanel.removeAll();
+                        }
+                    } else if (messageFromGroupChat.length() == 1) {
+                        totalNumberPlayers = Integer.parseInt(messageFromGroupChat);
+                    } else if (messageFromGroupChat.length() == 2) {
+                        if (messageFromGroupChat.equals("00")) {
                             JLabel rollInfoLabel3 = new JLabel(" Game Terminated.");
                             RollInfo.removeAll();
                             eRollInfo.removeAll();
                             RollInfo.add(rollInfoLabel3);
                             eRollInfo.add(rollInfoLabel3);
-                            repaint();
-                            revalidate();
-                        }else {
-                            if (!gameHasStarted) {
-                                gameHasStarted = true;
-                                if (totalNumberofPlayers < 4) {
-                                    playersPlayingCurrentGame = totalNumberofPlayers;
-                                } else {playersPlayingCurrentGame = 3;}
+                        } else if (messageFromGroupChat.equals("YL")) {
+                            determineWinner(players[myPlayerIndex].hasWon());
+                        }
+                        diePanel.setVisible(false);
+                        repaint();
+                        revalidate();
+                    } else {
+                        if (!gameHasStarted) {
+                            gameHasStarted = true;
+                            if (totalNumberPlayers < 4) {
+                                playersPlayingCurrentGame = totalNumberPlayers;
+                            } else {
+                                playersPlayingCurrentGame = 3;
                             }
-                            String[] message = messageFromGroupChat.split("@", 4);
-                            players[Integer.parseInt(message[0])].movePiece(Integer.parseInt(message[1]));
-                            eRollInfo.removeAll();
-                            PlayertoPlay = Integer.parseInt(message[3]);
-                            Color color;
+                        }
+                        String[] message = messageFromGroupChat.split("@", 4);
+                        players[Integer.parseInt(message[0])].movePiece(Integer.parseInt(message[1]));
+                        eRollInfo.removeAll();
+                        PlayertoPlay = Integer.parseInt(message[3]);
+                        Color color;
+                        try {
+                            Field field = Class.forName("java.awt.Color").
+                                    getField(players[Integer.parseInt(message[0])].colour.toLowerCase());
+                            color = (Color) field.get(null);
+                        } catch (Exception e) {
+                            color = null; // Not defined
+                        }
+                        eRollInfo.setBackground(color);
+                        JLabel rollInfoLabel2 = new JLabel(message[2] + " rolled a value of " + message[1]);
+                        rollInfoLabel2.setFont(new Font("Verdana", Font.BOLD, 15));
+                        rollInfoLabel2.setForeground(Color.white);
+                        eRollInfo.add(rollInfoLabel2);
+                        repaint();
+                        revalidate();
+                        if (PlayertoPlay == myPlayerIndex) {
+                            JLabel rollInfoLabel = new JLabel("YOUR TURN");
+                            rollInfoLabel.setFont(new Font("Verdana", Font.BOLD, 25));
+                            Color color2;
+                            diePanel.setVisible(true);
                             try {
                                 Field field = Class.forName("java.awt.Color").
-                                        getField(players[Integer.parseInt(message[0])].colour.toLowerCase());
-                                color = (Color) field.get(null);
+                                        getField(players[myPlayerIndex].colour.toLowerCase());
+                                color2 = (Color) field.get(null);
                             } catch (Exception e) {
-                                color = null; // Not defined
+                                color2 = null; // Not defined
                             }
-                            eRollInfo.setBackground(color);
-                            JLabel rollInfoLabel2 = new JLabel(message[2] + " rolled a value of " + message[1]);
-                            rollInfoLabel2.setFont(new Font("Verdana", Font.BOLD, 15));
-                            rollInfoLabel2.setForeground(Color.white);
-                            eRollInfo.add(rollInfoLabel2);
+                            rollInfoLabel.setForeground(color2);
+                            RollInfo.removeAll();
+                            RollInfo.add(rollInfoLabel);
                             repaint();
                             revalidate();
-                            if (PlayertoPlay == myPlayerIndex) {
-                                JLabel rollInfoLabel = new JLabel("YOUR TURN");
-                                rollInfoLabel.setFont(new Font("Verdana", Font.BOLD, 25));
-                                Color color2;
-                                diePanel.setVisible(true);
-                                try {
-                                    Field field = Class.forName("java.awt.Color").
-                                            getField(players[myPlayerIndex].colour.toLowerCase());
-                                    color2 = (Color) field.get(null);
-                                } catch (Exception e) {
-                                    color2 = null; // Not defined
-                                }
-                                rollInfoLabel.setForeground(color2);
-                                RollInfo.removeAll();
-                                RollInfo.add(rollInfoLabel);
-                                repaint();
-                                revalidate();
-                            }
-
                         }
 
-                    } catch (IOException e) {
-                        closeEverything(socket, bufferedReader, bufferedWriter);
                     }
+
+                } catch (IOException e) {
+                    closeEverything(socket, bufferedReader, bufferedWriter);
                 }
             }
         }).start();
+    }
+
+    public void determineWinner(boolean winner) {
+        JPanel gameOverPanel = new JPanel(new GridBagLayout());
+        gameOverPanel.setBounds(0, 0, 1000, 700);
+        JLabel gameOver = new JLabel();
+        if (Objects.equals(winner, false)) {
+            gameOverPanel.setBackground(Color.BLACK);
+            gameOver.setText("You Lost!");
+            gameOver.setForeground(Color.white);
+        } else {
+            gameOver.setText("You Won!");
+            gameOverPanel.setBackground(Color.white);
+            gameOver.setForeground(Color.black);
+        }
+        gameOver.setFont(new Font("Verdana", Font.BOLD, 100));
+        gameOverPanel.add(gameOver);
+        gameBoardGUI.add(gameOverPanel, Integer.valueOf(50));
     }
 
     public void closeEverything(Socket socket, BufferedReader bufferedReader, BufferedWriter bufferedWriter) {
